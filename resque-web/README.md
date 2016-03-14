@@ -1,5 +1,7 @@
 # Resque Web Interface
 
+[![](https://badge.imagelayers.io/carloslima/resque-web:latest.svg)](https://imagelayers.io/?images=carloslima/resque-web:latest)
+
 ## Usage:
 
 Standard port, database 0:
