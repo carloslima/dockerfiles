@@ -1,0 +1,23 @@
+FROM anapsix/alpine-java:8_jdk AS build
+
+RUN apk --no-cache add git
+RUN wget -O- http://www-eu.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz | tar -C /opt -xz && mv /opt/apache-maven-* /opt/maven
+RUN git clone --branch pr-146-confluent-compatible https://github.com/carloslima/divolte-collector ~/divolte-collector
+RUN git clone --branch pr-4-confluent-key-schema https://github.com/carloslima/divolte-schema ~/divolte-schema
+RUN cd ~/divolte-schema && /opt/maven/bin/mvn package
+RUN sed -i "s|compile group: 'io.divolte', name: 'divolte-schema', version: version|compile files('/root/divolte-schema/target/divolte-schema-0.7.0-SNAPSHOT.jar')|" /root/divolte-collector/build.gradle
+RUN cd ~/divolte-collector && ./gradlew tarball
+RUN tar -C /opt -xzf ~/divolte-collector/build/distributions/divolte-collector-0.7.0-SNAPSHOT.tar.gz
+
+
+FROM anapsix/alpine-java:8_server-jre
+COPY --from=build /opt/divolte-collector-0.7.0-SNAPSHOT /opt/divolte
+RUN sed -E 's|(\s*)//\s*host\s*= |\1host = |' /opt/divolte/conf/divolte-collector.conf.example > /opt/divolte/conf/divolte-collector.conf
+
+ENV JAVA_HOME /opt/jdk/
+ENV DIVOLTE_HOST 0.0.0.0
+
+EXPOSE 8290
+
+WORKDIR /opt/divolte
+CMD ["/opt/divolte/bin/divolte-collector"]
